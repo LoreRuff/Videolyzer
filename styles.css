@@ -1,0 +1,152 @@
+/* Videolyzer — unified playlist timeline.
+ * All ids/classes are vl-* prefixed so nothing can collide with YouTube's own
+ * styles. This file is registered globally on youtube.com pages, but it only
+ * matches elements content.js injects inside #movie_player. */
+
+#vl-bar {
+  --vl-accent: #a78bfa; /* Zen violet; override site-free, no config UI in v1 */
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 56px; /* sits above the native control bar (~48px): no overlap */
+  height: 22px;
+  z-index: 64;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+  outline: none;
+}
+
+#vl-bar.vl-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* While the user is on us we never hide, even if the player autohides. */
+#vl-bar.vl-over,
+#vl-bar.vl-drag {
+  opacity: 1;
+}
+
+#vl-bar.vl-off .vl-track {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.vl-track {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  margin-top: 17px; /* 22px hit area, track pinned to its bottom */
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: height 0.1s ease, margin-top 0.1s ease;
+}
+
+#vl-bar:hover .vl-track,
+#vl-bar.vl-drag .vl-track {
+  height: 8px;
+  margin-top: 14px;
+}
+
+.vl-buffer,
+.vl-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+.vl-buffer {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.vl-fill {
+  background: var(--vl-accent);
+}
+
+.vl-ticks {
+  position: absolute;
+  inset: 0;
+}
+
+/* One tick per video boundary: the whole point of a continuous timeline
+ * is seeing where each video starts. */
+.vl-ticks i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.vl-ball {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--vl-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transform: translate(-6px, -50%);
+  transition: opacity 0.12s ease;
+  will-change: transform;
+}
+
+#vl-bar:hover .vl-ball,
+#vl-bar.vl-drag .vl-ball {
+  opacity: 1;
+}
+
+.vl-tip {
+  position: absolute;
+  bottom: 30px;
+  transform: translateX(-50%);
+  max-width: 320px;
+  padding: 4px;
+  background: rgba(12, 12, 16, 0.92);
+  color: #eee;
+  font: 500 11px/1.4 Roboto, "YouTube Noto", Arial, sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* Seek preview: frame-accurate inside the playing video (background-
+ * position crops the right tile out of YouTube's tiled storyboard image),
+ * cover thumbnail for any other segment. content.js owns width/height and
+ * all background longhands; display stays none until the first paint. */
+.vl-prev {
+  display: none;
+  margin: 0 auto 4px;
+  border-radius: 4px;
+  background-color: #000;
+  background-repeat: no-repeat;
+}
+
+.vl-txt {
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vl-badge {
+  position: absolute;
+  right: 0;
+  bottom: 30px;
+  display: none;
+  padding: 2px 7px;
+  background: rgba(12, 12, 16, 0.92);
+  color: #f2c14e;
+  font: 700 10px/1.4 Roboto, "YouTube Noto", Arial, sans-serif;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  pointer-events: none;
+}
