@@ -112,5 +112,5 @@ Files run as-is — no build step. `web-ext lint` must stay at 0 errors / 0 warn
 
 Developed with strong AI assistance (opencode/GLM); humans led the ideas, the
 testing and the debugging — said openly because it shaped how the project was
-built. The name "Videolyzer" is free on the Chrome Web Store and on AMO; a few
-small, unrelated GitHub repos share it (video-analysis tools, not extensions).
+built. The name "Videolyzer" a few small, unrelated GitHub repos share it 
+(video-analysis tools, not extensions).
