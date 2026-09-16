@@ -111,6 +111,10 @@
       kind: 'state', ready: true,
       state: p.getPlayerState(),
       index: p.getPlaylistIndex(),
+      // The id of the video the player HOLDS, not its queue position: a
+      // runtime queue drops the played video on every advance, so positions
+      // shift under any in-flight intent while this id stays stable.
+      vid: (function () { try { return p.getVideoData ? p.getVideoData().video_id : null; } catch (e) { return null; } })(),
       t: p.getCurrentTime(),
       duration: p.getDuration(),
       loaded: p.getVideoLoadedFraction ? p.getVideoLoadedFraction() : 0,

@@ -139,7 +139,7 @@
 .vl-badge {
   position: absolute;
   right: 0;
-  bottom: 30px;
+  bottom: 60px; /* above the clock's row: during ads both are visible */
   display: none;
   padding: 2px 7px;
   background: rgba(12, 12, 16, 0.92);
@@ -149,4 +149,28 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 4px;
   pointer-events: none;
+}
+
+/* Global clock, mirrored to YouTube's own time display (theirs sits at the
+ * bottom-left of the native bar; ours answers it at the right of the unified
+ * track). Click toggles the remaining time of the whole queue. */
+.vl-time {
+  position: absolute;
+  right: 0;
+  bottom: 30px;
+  padding: 2px 7px;
+  background: rgba(12, 12, 16, 0.7);
+  color: #eee;
+  font: 500 12px/1.4 Roboto, "YouTube Noto", Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* In shuffle the global position is a lie, so the clock keeps silent too. */
+#vl-bar.vl-off .vl-time {
+  display: none;
 }

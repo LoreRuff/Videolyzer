@@ -8,42 +8,40 @@ Videolyzer
 
 ## Short summary (AMO, ≤ 250 chars)
 
-One continuous timeline for YouTube playlists and queues: cross-video seeking,
-hover previews, zero permissions, zero requests, zero tracking.
+One continuous timeline for YouTube playlists and queues: a single seekable
+progress bar across videos, hover previews, zero permissions, zero network
+requests, zero tracking.
 
-## Description
+## Description (AMO, max 4000 chars — also fits CWS, max 16000)
 
 > One timeline for the whole playlist.
-> Cross-video seeking, hover previews from YouTube's own storyboards, a queue
-> that stays live while you watch.
+> Cross-video seeking, hover previews straight from YouTube's own storyboards,
+> a queue that stays live while you watch.
 
 YouTube resets its progress bar at every video boundary. Videolyzer draws one
-bar over the player covering the entire playlist or queue — two content
+bar over the player covering the entire playlist or queue: two content
 scripts, one event channel, zero permissions.
 
-- **One continuous timeline** — every queue video becomes a segment of a single
-  bar, with ticks at the boundaries and a live position across the whole queue
-- **Cross-video seeking** — click, drag or arrow-key anywhere, including inside
-  videos you haven't reached yet; the jump is chained through the queue
-- **Hover previews** — real storyboard frames on the playing video (the same
-  grids YouTube's own bar hovers from), cover art for every other segment,
-  title and time always visible
-- **A queue that stays live** — add to the queue while watching and the bar
-  grows in real time; every rebuild is refereed against the player's own live
-  queue order, never a stale snapshot
-- **Keyboard first-class** — ←/→ for small steps, Shift for big ones, focus
-  kept on the bar after a drag
+- **One continuous timeline** — every queue video becomes a segment of a
+  single bar, with ticks at boundaries and a live position across the whole
+  queue
+- **Cross-video seeking** — click, drag or arrow-key anywhere, including
+  inside videos you haven't reached yet
+- **Hover previews** — real storyboard frames on the playing video, cover
+  thumbnails for every other segment, title and absolute queue time always
+  visible
+- **A queue that stays live** — add or remove videos while watching and the
+  bar grows in real time, refereed against the player's own live queue order
+- **Keyboard first-class** — ←/→ for small steps, Shift for big steps; the
+  bar is an accessible ARIA slider
+- **Honest guards** — ads freeze the timeline, shuffle disables scrubbing,
+  live streams bow out
 
-### Privacy & limits
+### Privacy
 
-- Zero permissions in the manifest. The extension makes zero network requests
-  and collects nothing: no analytics, no telemetry, no accounts.
-- Preview images load from YouTube's own image CDN on hover, exactly like any
-  other YouTube UI element. Everything else happens inside the page.
-- Shuffle disables scrubbing (a shuffled queue has no honest timeline) and the
-  bar says so.
-- Works on desktop youtube.com watch pages whenever a playlist or queue is
-  attached to the player.
+Zero permissions, zero network requests, no analytics, no telemetry, no
+accounts. Preview images load from YouTube's own CDN on hover, exactly like
+any other YouTube UI element.
 
 AGPL-3.0 — © LoreRuff
 
@@ -54,15 +52,13 @@ hover previews of the target position.
 
 ## CWS host permission justification (content scripts on youtube.com)
 
-Content scripts run only on youtube.com: they read the playlist and player data
-the page already contains and draw the unified timeline inside the player.
-Nothing is transmitted anywhere; no other permissions are requested.
+Content scripts run only on youtube.com: they read the playlist and player
+data the page already contains and draw the unified timeline inside the
+player. Nothing is transmitted anywhere; no other permissions are requested.
 
 ## Data collection disclosure (both stores)
 
-None. The extension declares and performs no data collection (Firefox shows the
-built-in "no data collection" consent consistent with
-`data_collection_permissions: required none` in the manifest).
+The extension does not collect any user data.
 
 ## Categories
 

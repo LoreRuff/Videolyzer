@@ -32,13 +32,14 @@
   let sbVid = null;   // video id the storyboard spec belongs to (bridge tick)
   let sb = null;      // parsed storyboard of that video, or null
   let prevKey = '';   // last preview drawn: pointermove storms restyle nothing
-  let st = { index: -1, t: 0, duration: 0, state: -1, loaded: 0 };
-  let pending = null;  // cross-video seek in flight: {i, local, tries}
+  let st = { index: -1, t: 0, duration: 0, state: -1, loaded: 0, vid: null };
+  let pending = null;  // cross-video seek in flight: {id, local, tries}
   let ui = null;       // built DOM refs
   let frozenAt = null; // last true position before an ad took over the player
   let playerEl = null;
   let hideObserver = null;
   let dragging = false;
+  let timeMode = 'elapsed'; // 'elapsed' | 'remaining': the clock click toggles
 
   // ---------- helpers ----------
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -196,7 +197,7 @@
     T = clamp(T, 0, total - 0.01);
     const i = findSegment(T);
     const local = T - starts[i];
-    if (i === st.index) {
+    if (queue[i].id === st.vid) {
       emit({ type: 'seek', t: local });
       pending = null;
     } else {
@@ -204,9 +205,15 @@
       // loads, so we never fire the seek together with playVideoAt(). The
       // watcher below applies it once the player reports the target ready.
       // playVideoAt runs synchronously inside this user-gesture task, which
-      // also keeps it alive when autoplay is blocked.
-      pending = { i, local, tries: 0 };
-      emit({ type: 'playAt', i });
+      // also keeps it alive when autoplay is blocked. The intent is keyed by
+      // VIDEO ID, not index: a runtime queue drops the played video on every
+      // advance, so panel and live positions drift apart while the id stays
+      // stable — a stale index would open the wrong video or never match.
+      // playAt resolves against the LIVE play order (qsig, one tick old at
+      // worst), the only map that agrees with the player right now.
+      const live = lastSig ? lastSig.split(',').indexOf(queue[i].id) : -1;
+      pending = { id: queue[i].id, local, tries: 0 };
+      emit({ type: 'playAt', i: live >= 0 ? live : i });
     }
   }
 
@@ -216,12 +223,12 @@
     // the video, and burn the retry budget. The ad is just "media not
     // ready" — wait it out.
     if (adShowing()) return;
-    // Gecko reports duration===0 until the new media is actually loaded,
-    // and a slow network can take longer than any fixed budget to switch
-    // videos. So the pending has no clock: it simply waits until the player
-    // is really on the target video. A click is a standing intent — it is
-    // replaced by the next click or dropped on teardown, never by a timer.
-    if (st.index !== pending.i || !(st.duration > 0)) return;
+    // Identity straight from the player (tick's vid): a runtime queue drops
+    // the played video on every advance, so the player's index maps into a
+    // queue that no longer exists mid-flight — the id of the held video is
+    // the only stable witness. Duration 0 on Gecko means the new media is
+    // not loaded yet; wait — a click is a standing intent, not a timed one.
+    if (st.vid !== pending.id || !(st.duration > 0)) return;
     if (Math.abs(st.t - pending.local) < LAND_EPS) { pending = null; return; }
     const now = performance.now();
     // Cued/unstarted: kick playVideo() first, one per second, a few times
@@ -321,7 +328,9 @@
     const s = ui.prev.style;
     s.display = 'block';
     s.width = w + 'px'; s.height = h + 'px';
-    s.backgroundImage = 'url("' + url + '")';
+    // url is page-derived (storyboard spec or a scraped queue id): escape
+    // quotes/backslashes so nothing can close the CSS url() string early.
+    s.backgroundImage = 'url("' + url.replace(/["\\]/g, '\\$&') + '")';
     s.backgroundPosition = pos;
     s.backgroundSize = size;
   }
@@ -357,11 +366,12 @@
     const txt = div('vl-txt');
     tip.append(prev, txt);
     const badge = div('vl-badge');
+    const time = div('vl-time');
 
     track.append(buffer, fill, ticks, ball);
-    root.append(track, tip, badge);
+    root.append(track, tip, badge, time);
     playerEl.appendChild(root);
-    ui = { root, track, fill, buffer, ball, tip, prev, txt, badge };
+    ui = { root, track, fill, buffer, ball, tip, prev, txt, badge, time, lastTime: '' };
     root.classList.toggle('vl-off', shuffled);
 
     bindUI();
@@ -380,7 +390,17 @@
   }
 
   function bindUI() {
-    const { root, track } = ui;
+    const { root, track, time } = ui;
+
+    // Click on the clock toggles remaining time, YouTube-style; clicks are
+    // stopped here so the page never reads the clock as a click on the video
+    // surface.
+    time.addEventListener('pointerdown', (e) => e.stopPropagation());
+    time.addEventListener('click', (e) => {
+      e.stopPropagation();
+      timeMode = timeMode === 'remaining' ? 'elapsed' : 'remaining';
+      paint();
+    });
 
     root.addEventListener('pointerenter', () => root.classList.add('vl-over'));
     root.addEventListener('pointerleave', () => { root.classList.remove('vl-over'); hideTip(); });
@@ -488,6 +508,15 @@
     ui.root.setAttribute('aria-valuetext', fmt(now) + ' / ' + fmt(total));
 
     setBadge(ad ? 'AD' : shuffled ? 'SHUFFLE OFF' : '');
+    // Global clock, mirrored to YouTube's own time display. Written only
+    // when the string changes: a 4 Hz repaint must not touch the DOM for
+    // nothing. Hidden during ads (the frozen position is the video's, the
+    // ad's clock would be a lie) and in shuffle (CSS: no honest position).
+    const clock = timeMode === 'remaining'
+      ? fmt(now) + ' / -' + fmt(Math.max(0, total - now))
+      : fmt(now) + ' / ' + fmt(total);
+    if (clock !== ui.lastTime) { ui.lastTime = clock; ui.time.textContent = clock; }
+    ui.time.style.visibility = ad ? 'hidden' : 'visible';
     mirrorAutohide();
   }
 
@@ -518,10 +547,12 @@
     }
     if (typeof d.qsig === 'string') lastSig = d.qsig;
     // Live queue changed under us (add/remove/shuffle toggle): rebuild from a
-    // fresh source. Never mid-drag or mid-seek — pending's index math refers
-    // to the old map — and with a cooldown, because sources can be stale and
-    // the next tick retries anyway.
-    if (typeof d.qsig === 'string' && d.qsig !== builtSig && !dragging && !pending &&
+    // fresh source. Never mid-drag — a drag preview reads starts[]. Mid-seek
+    // is fine since the id-keyed fix: pending matches the player's vid, not
+    // positions, and blocking here would deadlock a runtime queue that drops
+    // the played video exactly while the pending waits. Cooldown, because
+    // sources can be stale and the next tick retries anyway.
+    if (typeof d.qsig === 'string' && d.qsig !== builtSig && !dragging &&
         performance.now() - refreshAt > 1500) {
       refreshAt = performance.now();
       refreshQueue();
@@ -532,6 +563,7 @@
     st.duration = d.duration;
     st.state = d.state;
     st.loaded = d.loaded;
+    st.vid = d.vid || null;
     if (dragging) return; // preview wins until the pointer is released
     consumePending();
     paint();
@@ -558,9 +590,11 @@
     // playVideoAt() is a real SPA navigation: yt-navigate-finish fires while
     // our pending seek is still in flight, and a blanket wipe here used to
     // kill the very intent that caused the navigation. Keep the pending only
-    // when the page we just landed on IS its target video.
+    // when the page we just landed on IS its target video. Compared by id
+    // alone: the queue may not be rebuilt yet at this point, so an index or
+    // row lookup here would read null and destroy a legitimate intent.
     const v = new URLSearchParams(location.search).get('v');
-    const keep = !!(pending && queue && queue[pending.i] && queue[pending.i].id === v);
+    const keep = !!(pending && pending.id && pending.id === v);
     destroyUI();
     queue = null; starts = []; total = 0; shuffled = false;
     builtSig = ''; lastSig = null; lastDomQ = null; lastTick = null; sbVid = null; sb = null; // the new page owns its own queue

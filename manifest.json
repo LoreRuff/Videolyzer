@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Videolyzer",
   "short_name": "Videolyzer",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "description": "One continuous timeline for YouTube playlists: unified progress bar with cross-video seeking.",
   "icons": {
     "16": "icons/icon-16.png",
